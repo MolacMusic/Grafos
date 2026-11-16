@@ -3,6 +3,9 @@ Módulo de utilidades para el manejo de grafos de rutas viales en Ecuador.
 Unidad 3: Grafos - Algoritmos y Estructuras de Datos.
 """
 
+from collections import deque
+import heapq
+
 # Red de ejemplo de 7 ciudades de Ecuador representada como lista de adyacencia.
 # Grafo no dirigido ponderado: cada clave es una ciudad y el valor es una lista
 # de tuplas (ciudad_vecina, distancia_en_km).
@@ -107,7 +110,6 @@ def bfs(grafo, origen):
                 cola.append(vecino)
 
     return escalas, padres
-    return escalas, padres
 
 
 def reconstruir_ruta(padres, origen, destino):
@@ -161,3 +163,27 @@ def obtener_grafo_con_aislada(grafo_base=GRAFO_ECUADOR, ciudad_aislada="Galápag
     nuevo_grafo = {ciudad: list(vecinos) for ciudad, vecinos in grafo_base.items()}
     nuevo_grafo[ciudad_aislada] = []
     return nuevo_grafo
+
+
+# ============================================================================
+# R3: CAMINO MÁS CORTO EN DISTANCIA (DIJKSTRA)
+# ============================================================================
+
+import heapq
+
+# Dijkstra: O((V + E) log V)  (el factor log V viene de las operaciones push/pop del heap, cada una cuesta O(log V)).
+def dijkstra(grafo, origen):
+    """Devuelve {ciudad: distancia_minima_desde_origen}."""
+    dist = {ciudad: float('inf') for ciudad in grafo}
+    dist[origen] = 0
+    heap = [(0, origen)]  # cola de prioridad
+    while heap:
+        d, u = heapq.heappop(heap)  # el mas cercano pendiente
+        if d > dist[u]:
+            continue  # ya teniamos una ruta mejor
+        for vecino, peso in grafo[u]:
+            if dist[u] + peso < dist[vecino]:  # relajacion
+                dist[vecino] = dist[u] + peso
+                heapq.heappush(heap, (dist[vecino], vecino))
+    return dist
+
