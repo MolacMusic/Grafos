@@ -15,240 +15,189 @@ from utilidades import (
     obtener_grafo_con_aislada,
     dijkstra,
     calcular_distancia_ruta,
-    ruta_minima
+    ruta_minima,
+    graficar_grafo
 )
 
 
-## Función de Mostrar Menú en Consola
+def pedir_ciudad(grafo, mensaje="Ingrese la ciudad: "):
+    """Solicita una ciudad y valida que pertenezca al grafo activo (insensible a mayúsculas)."""
+    while True:
+        entrada = input(mensaje).strip()
+        coincidencia = next((c for c in grafo if c.lower() == entrada.lower()), None)
+        if coincidencia:
+            return coincidencia
+        print(f"[Error] '{entrada}' no es válida. Elija entre: {', '.join(grafo.keys())}")
+
+
+def elegir_red(grafo_base):
+    """Permite seleccionar la red estándar o la de prueba con ciudad aislada."""
+    print("\nModalidad de red:")
+    print("  1. Red estándar (7 ciudades)")
+    print("  2. Red de prueba con ciudad aislada ('Galápagos')")
+    opc = input("Seleccione modalidad (1 o 2) [Enter para 1]: ").strip()
+    if opc == "2":
+        print("[i] Red con ciudad aislada activada.")
+        return obtener_grafo_con_aislada(grafo_base, "Galápagos")
+    return grafo_base
+
+
 def mostrar_menu():
-    """Muestra el menú principal de opciones en la consola."""
-    print("\n" + "=" * 60)
-    print("      SISTEMA DE RUTAS VIALES DEL ECUADOR")
-    print("=" * 60)
+    """Muestra el menú principal optimizado en consola."""
+    print("\n" + "=" * 54)
+    print("       SISTEMA DE RUTAS VIALES DEL ECUADOR")
+    print("=" * 54)
     print("1. Mostrar grafo y grados de las ciudades")
-    print("2. Recorrido BFS: escalas y conectividad desde una ciudad")
+    print("2. Recorrido BFS: escalas y conectividad")
     print("3. Ruta más corta en distancia (Dijkstra)")
-    print("4. Comparar rutas (Menos escalas BFS vs. Menor distancia Dijkstra)")
+    print("4. Comparar rutas (BFS vs. Dijkstra)")
+    print("5. Graficar grafo")
     print("0. Salir")
-    print("-" * 60)
+    print("-" * 54)
 
 
-## Función Principal y Bucle Interactivo
 def main():
-    """Función principal con el bucle interactivo de consola."""
-    # Grafo cargado en memoria como lista de adyacencia
+    """Función principal y bucle de control interactivo."""
     grafo = GRAFO_ECUADOR
 
     while True:
         mostrar_menu()
         opcion = input("Seleccione una opción: ").strip()
 
+        # --------------------------------------------------------------------
+        # 1. MOSTRAR GRAFO Y GRADOS
+        # --------------------------------------------------------------------
         if opcion == "1":
-            # Operación principal: Visualización y grados
             # Complejidad: O(V + E) para mostrar_grafo y O(V) para grado
             mostrar_grafo(grafo)
             grado(grafo)
             input("\nPresione Enter para continuar...")
 
+        # --------------------------------------------------------------------
+        # 2. BFS: ESCALAS Y CONECTIVIDAD
+        # --------------------------------------------------------------------
         elif opcion == "2":
-            # R2: Recorrido BFS, escalas y análisis de conectividad
-            print("\n--- RECORRIDO BFS Y VERIFICACIÓN DE CONECTIVIDAD ---")
-            print("Modalidades de prueba:")
-            print("  1. Usar red estándar de Ecuador (7 ciudades)")
-            print("  2. Probar con red temporal que incluye una ciudad aislada ('Galápagos')")
-            tipo_red = input("Seleccione modalidad (1 o 2) [Enter para 1]: ").strip()
-
-            if tipo_red == "2":
-                grafo_activo = obtener_grafo_con_aislada(grafo, "Galápagos")
-                print("\n[i] Red temporal con 'Galápagos' (ciudad aislada) activada.")
-            else:
-                grafo_activo = grafo
-                print("\n[i] Red estándar activa (7 ciudades).")
+            print("\n--- RECORRIDO BFS Y CONECTIVIDAD ---")
+            grafo_activo = elegir_red(grafo)
 
             ciudades_disponibles = list(grafo_activo.keys())
             print(f"Ciudades disponibles: {', '.join(ciudades_disponibles)}")
 
-            # Validación de la ciudad de origen
-            while True:
-                entrada_origen = input("\nIngrese la ciudad de origen: ").strip()
-                origen = next((c for c in grafo_activo if c.lower() == entrada_origen.lower()), None)
-                if origen:
-                    break
-                print(f"[Error] La ciudad '{entrada_origen}' no existe en la red. Intente de nuevo.")
+            origen = pedir_ciudad(grafo_activo, "\nIngrese la ciudad de origen: ")
 
             # BFS: O(V + E)
             escalas, padres = bfs(grafo_activo, origen)
 
-            # Mostrar cada ciudad alcanzable con sus escalas
             print(f"\n--- CIUDADES ALCANZABLES DESDE {origen.upper()} (BFS) ---")
-            for ciudad, num_escalas in sorted(escalas.items(), key=lambda item: (item[1], item[0])):
-                if num_escalas == 0:
-                    print(f"• {ciudad}: {num_escalas} escalas (Punto de origen)")
-                elif num_escalas == 1:
-                    print(f"• {ciudad}: {num_escalas} escala (Conexión directa)")
-                else:
-                    print(f"• {ciudad}: {num_escalas} escalas")
+            for ciudad, num in sorted(escalas.items(), key=lambda x: (x[1], x[0])):
+                etiqueta = "(Origen)" if num == 0 else f"{num} escala(s)"
+                print(f"• {ciudad}: {etiqueta}")
 
-            # Verificación de conectividad de la red
             verificar_conectividad(grafo_activo, escalas)
 
-            # Consulta opcional para reconstruir la ruta (útil para verificar R2 y preparar R4)
-            consulta_ruta = input("\n¿Desea consultar la ruta con menos escalas hacia algún destino? (s/n) [n]: ").strip().lower()
-            if consulta_ruta == "s":
-                entrada_dest = input("Ingrese la ciudad de destino: ").strip()
-                destino = next((c for c in grafo_activo if c.lower() == entrada_dest.lower()), None)
-                if destino and destino in escalas:
+            if input("\n¿Desea consultar la ruta a un destino? (s/n) [n]: ").strip().lower() == "s":
+                destino = pedir_ciudad(grafo_activo, "Ingrese la ciudad de destino: ")
+                if destino in escalas:
                     ruta = reconstruir_ruta(padres, origen, destino)
-                    print(f"-> Ruta con menos escalas ({escalas[destino]} escalas): {' -> '.join(ruta)}")
-                elif destino and destino not in escalas:
-                    print(f"[!] No existe ruta hacia {destino} (ciudad aislada / inalcanzable).")
+                    print(f"-> Ruta: {' -> '.join(ruta)} ({escalas[destino]} escalas)")
                 else:
-                    print(f"[Error] La ciudad destino ingresada no existe.")
+                    print(f"[!] No existe ruta hacia {destino} (ciudad inalcanzable).")
 
             input("\nPresione Enter para continuar...")
 
+        # --------------------------------------------------------------------
+        # 3. DIJKSTRA: DISTANCIAS MÍNIMAS
+        # --------------------------------------------------------------------
         elif opcion == "3":
-            # R3: Distancias mínimas con algoritmo de Dijkstra
-            print("\n--- DISTANCIAS MÍNIMAS (ALGORITMO DE DIJKSTRA) ---")
-            print("Modalidades de prueba:")
-            print("  1. Usar red estándar de Ecuador (7 ciudades)")
-            print("  2. Probar con red temporal que incluye una ciudad aislada ('Galápagos')")
-            tipo_red = input("Seleccione modalidad (1 o 2) [Enter para 1]: ").strip()
-
-            if tipo_red == "2":
-                grafo_activo = obtener_grafo_con_aislada(grafo, "Galápagos")
-                print("\n[i] Red temporal con 'Galápagos' (ciudad aislada) activada.")
-            else:
-                grafo_activo = grafo
-                print("\n[i] Red estándar activa (7 ciudades).")
+            print("\n--- DISTANCIAS MÍNIMAS (DIJKSTRA) ---")
+            grafo_activo = elegir_red(grafo)
 
             ciudades_disponibles = list(grafo_activo.keys())
             print(f"Ciudades disponibles: {', '.join(ciudades_disponibles)}")
 
-            # Validación de la ciudad de origen
-            while True:
-                entrada_origen = input("\nIngrese la ciudad de origen: ").strip()
-                origen = next((c for c in grafo_activo if c.lower() == entrada_origen.lower()), None)
-                if origen:
-                    break
-                print(f"[Error] La ciudad '{entrada_origen}' no existe en la red. Intente de nuevo.")
+            origen = pedir_ciudad(grafo_activo, "\nIngrese la ciudad de origen: ")
 
             # Dijkstra: O((V + E) log V)
             distancias = dijkstra(grafo_activo, origen)
 
-            # Mostrar distancias ordenadas de menor a mayor
-            print(f"\n--- DISTANCIAS MÍNIMAS DESDE {origen.upper()} (DIJKSTRA) ---")
-            ciudades_ordenadas = sorted(distancias.items(), key=lambda item: (item[1], item[0]))
-            for ciudad, dist in ciudades_ordenadas:
-                if dist == float('inf'):
-                    print(f"• {ciudad}: inalcanzable")
-                elif ciudad == origen:
-                    print(f"• {ciudad}: {dist} km (Punto de origen)")
-                else:
-                    print(f"• {ciudad}: {dist} km")
+            print(f"\n--- DISTANCIAS MÍNIMAS DESDE {origen.upper()} ---")
+            for ciudad, d in sorted(distancias.items(), key=lambda x: (x[1], x[0])):
+                print(f"• {ciudad}: {d} km" if d != float('inf') else f"• {ciudad}: inalcanzable")
 
-            # Cálculo de ciudad más cercana y más lejana (excluyendo el origen e inalcanzables)
-            alcanzables_sin_origen = {
-                ciudad: dist for ciudad, dist in distancias.items()
-                if ciudad != origen and dist != float('inf')
-            }
+            alcanzables = {c: d for c, d in distancias.items() if c != origen and d != float('inf')}
+            if alcanzables:
+                c_cercana = min(alcanzables, key=alcanzables.get)
+                c_lejana = max(alcanzables, key=alcanzables.get)
+                print(f"\n• Más CERCANA a {origen}: {c_cercana} ({alcanzables[c_cercana]} km)")
+                print(f"• Más LEJANA de {origen}:  {c_lejana} ({alcanzables[c_lejana]} km)")
 
-            print("\n--- ANÁLISIS DE DISTANCIAS EXTREMAS ---")
-            if alcanzables_sin_origen:
-                ciudad_mas_cercana = min(alcanzables_sin_origen, key=alcanzables_sin_origen.get)
-                dist_cercana = alcanzables_sin_origen[ciudad_mas_cercana]
-
-                ciudad_mas_lejana = max(alcanzables_sin_origen, key=alcanzables_sin_origen.get)
-                dist_lejana = alcanzables_sin_origen[ciudad_mas_lejana]
-
-                print(f"• Ciudad MÁS CERCANA a {origen}: {ciudad_mas_cercana} ({dist_cercana} km)")
-                print(f"• Ciudad MÁS LEJANA de {origen}:  {ciudad_mas_lejana} ({dist_lejana} km)")
-            else:
-                print("• No existen otras ciudades alcanzables desde este origen.")
-
-            # Informar si existen ciudades inalcanzables
-            inalcanzables = [ciudad for ciudad, dist in distancias.items() if dist == float('inf')]
+            inalcanzables = [c for c, d in distancias.items() if d == float('inf')]
             if inalcanzables:
                 print(f"• Ciudades INALCANZABLES ({len(inalcanzables)}): {', '.join(inalcanzables)}")
 
             input("\nPresione Enter para continuar...")
 
+        # --------------------------------------------------------------------
+        # 4. COMPARAR RUTAS: BFS VS. DIJKSTRA
+        # --------------------------------------------------------------------
         elif opcion == "4":
-            # R4: Comparación entre BFS (menos escalas) y Dijkstra (menor distancia)
-            print("\n--- COMPARACIÓN DE RUTAS: BFS VS. DIJKSTRA ---")
+            print("\n--- COMPARACIÓN: BFS VS. DIJKSTRA ---")
             ciudades_disponibles = list(grafo.keys())
             print(f"Ciudades disponibles: {', '.join(ciudades_disponibles)}")
 
-            # Validación de la ciudad de origen
-            while True:
-                entrada_origen = input("\nIngrese la ciudad de origen: ").strip()
-                origen = next((c for c in grafo if c.lower() == entrada_origen.lower()), None)
-                if origen:
-                    break
-                print(f"[Error] La ciudad '{entrada_origen}' no existe en la red. Intente de nuevo.")
-
-            # Validación de la ciudad de destino
-            while True:
-                entrada_destino = input("Ingrese la ciudad de destino: ").strip()
-                destino = next((c for c in grafo if c.lower() == entrada_destino.lower()), None)
-                if destino:
-                    break
-                print(f"[Error] La ciudad '{entrada_destino}' no existe en la red. Intente de nuevo.")
+            origen = pedir_ciudad(grafo, "\nIngrese ciudad de origen: ")
+            destino = pedir_ciudad(grafo, "Ingrese ciudad de destino: ")
 
             if origen == destino:
-                print(f"\n[!] El origen y destino son la misma ciudad ({origen}).")
-                print("• Escalas: 0 | Distancia: 0 km. Las rutas coinciden de forma trivial.")
+                print(f"\n[!] El origen y destino coinciden ({origen}): 0 escalas y 0 km.")
             else:
-                # Comparación R4: O((V + E) log V) (dominada por Dijkstra)
-                # 1. Ruta BFS (menos escalas)
-                _escalas_bfs, padres_bfs = bfs(grafo, origen)
+                # Comparación R4: O((V + E) log V)
+                _escalas, padres_bfs = bfs(grafo, origen)
                 ruta_bfs = reconstruir_ruta(padres_bfs, origen, destino)
 
-                # 2. Ruta Dijkstra (menor distancia en km)
                 ruta_dijkstra = ruta_minima(grafo, origen, destino)
-                distancias_dijkstra = dijkstra(grafo, origen)
+                distancias = dijkstra(grafo, origen)
 
                 if not ruta_bfs or not ruta_dijkstra:
-                    print(f"\n[!] No existe una ruta transitable entre {origen} y {destino}.")
+                    print(f"\n[!] No existe ruta entre {origen} y {destino}.")
                 else:
                     dist_bfs = calcular_distancia_ruta(grafo, ruta_bfs)
-                    escalas_bfs_num = len(ruta_bfs) - 1
+                    esc_bfs = len(ruta_bfs) - 1
 
-                    dist_dijkstra = distancias_dijkstra[destino]
-                    escalas_dijkstra_num = len(ruta_dijkstra) - 1
+                    dist_dijk = distancias[destino]
+                    esc_dijk = len(ruta_dijkstra) - 1
 
-                    print("\n" + "=" * 60)
-                    print(f"     COMPARACIÓN DE RUTAS: {origen.upper()} -> {destino.upper()}")
-                    print("=" * 60)
-                    print("1. RUTA CON MENOS ESCALAS (BFS):")
-                    print(f"   • Trayecto:          {' -> '.join(ruta_bfs)}")
-                    print(f"   • Número de escalas: {escalas_bfs_num}")
-                    print(f"   • Distancia total:   {dist_bfs} km")
+                    print(f"\n--- RESULTADOS: {origen.upper()} -> {destino.upper()} ---")
+                    print(f"1. BFS (Menos escalas):  {' -> '.join(ruta_bfs)} | {esc_bfs} escala(s) | {dist_bfs} km")
+                    print(f"2. Dijkstra (Menor km): {' -> '.join(ruta_dijkstra)} | {esc_dijk} escala(s) | {dist_dijk} km")
 
-                    print("\n2. RUTA DE MENOR DISTANCIA (DIJKSTRA):")
-                    print(f"   • Trayecto:          {' -> '.join(ruta_dijkstra)}")
-                    print(f"   • Número de escalas: {escalas_dijkstra_num}")
-                    print(f"   • Distancia total:   {dist_dijkstra} km")
-
-                    print("\n" + "-" * 60)
                     if ruta_bfs == ruta_dijkstra:
-                        print("✔ Las rutas COINCIDEN:")
-                        print("  La ruta con menos escalas es idéntica a la ruta de menor distancia.")
+                        print("\n✔ Las rutas COINCIDEN.")
                     else:
-                        print("✘ Las rutas NO COINCIDEN:")
-                        print(f"  • BFS optimiza escalas: {escalas_bfs_num} escala(s), pero recorre {dist_bfs} km.")
-                        print(f"  • Dijkstra optimiza distancia: {dist_dijkstra} km, pero realiza {escalas_dijkstra_num} escala(s).")
-                        print(f"  -> Diferencia: Dijkstra ahorra {dist_bfs - dist_dijkstra} km sumando {escalas_dijkstra_num - escalas_bfs_num} escala(s).")
-                    print("-" * 60)
+                        print("\n✘ Las rutas NO COINCIDEN:")
+                        print(f"  • BFS prioriza menos escalas: {esc_bfs} escala(s) recorriendo {dist_bfs} km.")
+                        print(f"  • Dijkstra ahorra {dist_bfs - dist_dijk} km realizando {esc_dijk - esc_bfs} escala(s) más.")
 
             input("\nPresione Enter para continuar...")
 
+        # --------------------------------------------------------------------
+        # 5. GRAFICAR GRAFO
+        # --------------------------------------------------------------------
+        elif opcion == "5":
+            print("\n--- GRÁFICA DEL GRAFO ---")
+            grafo_activo = elegir_red(grafo)
+            graficar_grafo(grafo_activo)
+            input("\nPresione Enter para continuar...")
+
+        # --------------------------------------------------------------------
+        # 0. SALIR
+        # --------------------------------------------------------------------
         elif opcion == "0":
-            print("\nSaliendo del sistema. ¡Hasta pronto!")
+            print("\nSaliendo del sistema de rutas viales. ¡Hasta pronto!")
             break
 
         else:
-            print("\n[Error] Opción no válida. Por favor, ingrese un número del menú.")
+            print("\n[Error] Opción no válida. Por favor, seleccione un número del menú.")
 
 
 if __name__ == "__main__":

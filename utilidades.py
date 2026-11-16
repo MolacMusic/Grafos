@@ -249,3 +249,95 @@ def ruta_minima(grafo, origen, destino):
     return camino
 
 
+# ============================================================================
+# R5: GRAFICAR GRAFO (FONDO BLANCO, PESOS EN KM Y NOMBRES DE CIUDADES)
+# ============================================================================
+
+def graficar_grafo(grafo):
+    """
+    Muestra el grafo en una ventana con fondo blanco, nombres de ciudades y pesos (km).
+    No más, no menos. Utiliza Tkinter (biblioteca estándar, liviana y nativa).
+    """
+    try:
+        import tkinter as tk
+    except ImportError:
+        print("[Error] No se encontró 'tkinter'. Instálelo en su entorno de Python.")
+        return
+
+    # Coordenadas relativas de las ciudades (distribución geográfica limpia)
+    posiciones = {
+        "Quito": (380, 80),
+        "Ambato": (370, 175),
+        "Riobamba": (380, 265),
+        "Guayaquil": (200, 335),
+        "Cuenca": (360, 405),
+        "Machala": (210, 475),
+        "Loja": (350, 545),
+        "Galápagos": (90, 200)
+    }
+
+    try:
+        ventana = tk.Tk()
+    except tk.TclError as e:
+        print(f"[Aviso] No fue posible abrir la interfaz gráfica: {e}")
+        return
+
+    ventana.title("Grafo de Rutas - Ecuador")
+    ventana.geometry("700x620")
+    ventana.resizable(False, False)
+    ventana.configure(bg="white")
+
+    canvas = tk.Canvas(ventana, width=700, height=620, bg="white", highlightthickness=0)
+    canvas.pack(fill=tk.BOTH, expand=True)
+
+    # 1. Dibujar aristas y pesos en km
+    aristas_dibujadas = set()
+    for ciudad, vecinos in grafo.items():
+        if ciudad not in posiciones:
+            continue
+        x1, y1 = posiciones[ciudad]
+
+        for vecino, peso in vecinos:
+            if vecino not in posiciones:
+                continue
+            arista = tuple(sorted([ciudad, vecino]))
+            if arista in aristas_dibujadas:
+                continue
+            aristas_dibujadas.add(arista)
+
+            x2, y2 = posiciones[vecino]
+
+            # Quito - Cuenca directa: curva suave hacia la derecha para no tapar ciudades intermedias
+            if arista == ("Cuenca", "Quito"):
+                cx, cy = 510, 240
+                canvas.create_line(x1, y1, cx, cy, x2, y2, smooth=True, fill="#64748b", width=2)
+                canvas.create_rectangle(cx - 24, cy - 9, cx + 24, cy + 9, fill="white", outline="white")
+                canvas.create_text(cx, cy, text=f"{peso} km", font=("Arial", 8, "bold"), fill="#334155")
+            else:
+                canvas.create_line(x1, y1, x2, y2, fill="#94a3b8", width=1)
+                mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+                canvas.create_rectangle(mx - 24, my - 9, mx + 24, my + 9, fill="white", outline="white")
+                canvas.create_text(mx, my, text=f"{peso} km", font=("Arial", 8), fill="#334155")
+
+    # 2. Dibujar nodos y nombres de ciudades
+    radio = 14
+    for ciudad in grafo:
+        if ciudad not in posiciones:
+            continue
+        cx, cy = posiciones[ciudad]
+
+        # Nodo
+        canvas.create_oval(cx - radio, cy - radio, cx + radio, cy + radio, fill="#38bdf8", outline="#0284c7", width=2)
+
+        # Nombre de la ciudad
+        offset_x, offset_y = 0, -22
+        if ciudad in ("Guayaquil", "Machala"):
+            offset_x, offset_y = -50, 0
+
+        canvas.create_text(cx + offset_x, cy + offset_y, text=ciudad, font=("Arial", 9, "bold"), fill="#0f172a")
+
+    print("\n[i] Mostrando ventana del grafo. Ciérrela para volver al menú.")
+    ventana.mainloop()
+
+
+
