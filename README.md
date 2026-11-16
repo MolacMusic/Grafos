@@ -25,6 +25,8 @@ No requiere librerías externas (solo Python 3.x). La red de ejemplo ya viene ca
 
 `4. Comparación de rutas (BFS vs Dijkstra)`
 
+`5. Graficar Grafo`
+
 `0. Salir`
 
 ## Tabla de Complejidades
