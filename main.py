@@ -13,7 +13,9 @@ from utilidades import (
     reconstruir_ruta,
     verificar_conectividad,
     obtener_grafo_con_aislada,
-    dijkstra
+    dijkstra,
+    calcular_distancia_ruta,
+    ruta_minima
 )
 
 
@@ -26,7 +28,7 @@ def mostrar_menu():
     print("1. Mostrar grafo y grados de las ciudades")
     print("2. Recorrido BFS: escalas y conectividad desde una ciudad")
     print("3. Ruta más corta en distancia (Dijkstra)")
-    print("4. [Aún sin implementar] Comparar rutas (Escalas vs. Distancia)")
+    print("4. Comparar rutas (Menos escalas BFS vs. Menor distancia Dijkstra)")
     print("0. Salir")
     print("-" * 60)
 
@@ -172,7 +174,73 @@ def main():
             input("\nPresione Enter para continuar...")
 
         elif opcion == "4":
-            print("\n[!] Esta opción estará disponible próximamente en la siguiente entrega.")
+            # R4: Comparación entre BFS (menos escalas) y Dijkstra (menor distancia)
+            print("\n--- COMPARACIÓN DE RUTAS: BFS VS. DIJKSTRA ---")
+            ciudades_disponibles = list(grafo.keys())
+            print(f"Ciudades disponibles: {', '.join(ciudades_disponibles)}")
+
+            # Validación de la ciudad de origen
+            while True:
+                entrada_origen = input("\nIngrese la ciudad de origen: ").strip()
+                origen = next((c for c in grafo if c.lower() == entrada_origen.lower()), None)
+                if origen:
+                    break
+                print(f"[Error] La ciudad '{entrada_origen}' no existe en la red. Intente de nuevo.")
+
+            # Validación de la ciudad de destino
+            while True:
+                entrada_destino = input("Ingrese la ciudad de destino: ").strip()
+                destino = next((c for c in grafo if c.lower() == entrada_destino.lower()), None)
+                if destino:
+                    break
+                print(f"[Error] La ciudad '{entrada_destino}' no existe en la red. Intente de nuevo.")
+
+            if origen == destino:
+                print(f"\n[!] El origen y destino son la misma ciudad ({origen}).")
+                print("• Escalas: 0 | Distancia: 0 km. Las rutas coinciden de forma trivial.")
+            else:
+                # Comparación R4: O((V + E) log V) (dominada por Dijkstra)
+                # 1. Ruta BFS (menos escalas)
+                _escalas_bfs, padres_bfs = bfs(grafo, origen)
+                ruta_bfs = reconstruir_ruta(padres_bfs, origen, destino)
+
+                # 2. Ruta Dijkstra (menor distancia en km)
+                ruta_dijkstra = ruta_minima(grafo, origen, destino)
+                distancias_dijkstra = dijkstra(grafo, origen)
+
+                if not ruta_bfs or not ruta_dijkstra:
+                    print(f"\n[!] No existe una ruta transitable entre {origen} y {destino}.")
+                else:
+                    dist_bfs = calcular_distancia_ruta(grafo, ruta_bfs)
+                    escalas_bfs_num = len(ruta_bfs) - 1
+
+                    dist_dijkstra = distancias_dijkstra[destino]
+                    escalas_dijkstra_num = len(ruta_dijkstra) - 1
+
+                    print("\n" + "=" * 60)
+                    print(f"     COMPARACIÓN DE RUTAS: {origen.upper()} -> {destino.upper()}")
+                    print("=" * 60)
+                    print("1. RUTA CON MENOS ESCALAS (BFS):")
+                    print(f"   • Trayecto:          {' -> '.join(ruta_bfs)}")
+                    print(f"   • Número de escalas: {escalas_bfs_num}")
+                    print(f"   • Distancia total:   {dist_bfs} km")
+
+                    print("\n2. RUTA DE MENOR DISTANCIA (DIJKSTRA):")
+                    print(f"   • Trayecto:          {' -> '.join(ruta_dijkstra)}")
+                    print(f"   • Número de escalas: {escalas_dijkstra_num}")
+                    print(f"   • Distancia total:   {dist_dijkstra} km")
+
+                    print("\n" + "-" * 60)
+                    if ruta_bfs == ruta_dijkstra:
+                        print("✔ Las rutas COINCIDEN:")
+                        print("  La ruta con menos escalas es idéntica a la ruta de menor distancia.")
+                    else:
+                        print("✘ Las rutas NO COINCIDEN:")
+                        print(f"  • BFS optimiza escalas: {escalas_bfs_num} escala(s), pero recorre {dist_bfs} km.")
+                        print(f"  • Dijkstra optimiza distancia: {dist_dijkstra} km, pero realiza {escalas_dijkstra_num} escala(s).")
+                        print(f"  -> Diferencia: Dijkstra ahorra {dist_bfs - dist_dijkstra} km sumando {escalas_dijkstra_num - escalas_bfs_num} escala(s).")
+                    print("-" * 60)
+
             input("\nPresione Enter para continuar...")
 
         elif opcion == "0":

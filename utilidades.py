@@ -187,3 +187,65 @@ def dijkstra(grafo, origen):
                 heapq.heappush(heap, (dist[vecino], vecino))
     return dist
 
+
+# ============================================================================
+# R4: COMPARACIÓN DE RUTAS (ESCALAS BFS VS. DISTANCIA DIJKSTRA)
+# ============================================================================
+
+def calcular_distancia_ruta(grafo, ruta):
+    """
+    Calcula la distancia total acumulada en km de una ruta (secuencia de ciudades).
+    Retorna 0 si la ruta tiene menos de dos ciudades o float('inf') si no es válida.
+    """
+    if not ruta or len(ruta) < 2:
+        return 0
+    distancia_total = 0
+    for i in range(len(ruta) - 1):
+        actual, siguiente = ruta[i], ruta[i + 1]
+        encontrado = False
+        for vecino, peso in grafo.get(actual, []):
+            if vecino == siguiente:
+                distancia_total += peso
+                encontrado = True
+                break
+        if not encontrado:
+            return float('inf')
+    return distancia_total
+
+
+# Comparación R4: O((V + E) log V) (por Dijkstra)
+def ruta_minima(grafo, origen, destino):
+    """
+    Reconstruye el camino de menor distancia entre origen y destino usando
+    las distancias calculadas por dijkstra().
+    
+    Partiendo del destino, retrocede eligiendo el vecino v tal que
+    dist[v] + peso == dist[actual]. Devuelve la lista de ciudades.
+    """
+    if origen not in grafo or destino not in grafo:
+        return []
+    if origen == destino:
+        return [origen]
+
+    dist = dijkstra(grafo, origen)
+    if dist.get(destino, float('inf')) == float('inf'):
+        return []
+
+    camino = [destino]
+    actual = destino
+
+    while actual != origen:
+        retrocedio = False
+        for vecino, peso in grafo.get(actual, []):
+            if dist[vecino] + peso == dist[actual]:
+                camino.append(vecino)
+                actual = vecino
+                retrocedio = True
+                break
+        if not retrocedio:
+            return []
+
+    camino.reverse()
+    return camino
+
+
